@@ -17,15 +17,16 @@ const BaseNode: React.FC<BaseNodeProps> = ({ data, selected, children, className
     return (
         <div className={`node-wrapper ${selected ? 'selected' : ''}`}>
             <div className={`node base-node ${className}`}>
-                <Handle type="target" position={Position.Left} />
+                <Handle type="target" position={Position.Left}/>
                 {children}
-                <Handle type="source" position={Position.Right} />
+                <Handle type="source" position={Position.Right}/>
             </div>
             {data.response && (
                 <div className="node-response">
                     <pre>{data.response}</pre>
                 </div>
             )}
+
         </div>
     );
 }

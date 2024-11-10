@@ -1,7 +1,13 @@
 import React, { useState } from 'react';
 import BaseNode, { BaseNodeProps } from './BaseNode';
 import Button from '@mui/material/Button';
-import { useReactFlow } from 'reactflow';
+import {Handle, Position, useReactFlow} from 'reactflow';
+
+const DEFAULT_HANDLE_STYLE = {
+    width: 10,
+    height: 10,
+    bottom: -5,
+};
 
 const CapitalizeNode: React.FC<BaseNodeProps> = (props) => {
     const [isProcessing, setIsProcessing] = useState(false);
@@ -44,6 +50,24 @@ const CapitalizeNode: React.FC<BaseNodeProps> = (props) => {
             >
                 Capitalize
             </Button>
+            <Handle
+                type="source"
+                id="red"
+                position={Position.Bottom}
+                style={{ ...DEFAULT_HANDLE_STYLE, left: '15%', background: 'red' }}
+            />
+            <Handle
+                type="source"
+                position={Position.Bottom}
+                id="blue"
+                style={{ ...DEFAULT_HANDLE_STYLE, left: '50%', background: 'blue' }}
+            />
+            <Handle
+                type="source"
+                position={Position.Bottom}
+                id="orange"
+                style={{ ...DEFAULT_HANDLE_STYLE, left: '85%', background: 'orange' }}
+            />
         </BaseNode>
     );
 }
