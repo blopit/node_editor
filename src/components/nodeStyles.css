@@ -211,18 +211,20 @@
 }
 
 /* Text Input Node */
-.text-input-node {
+.text-input-node, .text-display-node {
   background: white;
   border: 1px solid #ddd;
   border-radius: 5px;
   padding: 10px;
   min-width: 200px;
+  position: relative;
 }
 
-.text-input-content {
+.text-input-content, .text-display-content {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  margin: 0 10px;
 }
 
 .text-input-content textarea {
@@ -291,4 +293,20 @@
   min-height: 60px;
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+/* Handle styling */
+.react-flow__handle {
+  width: 8px;
+  height: 12px;
+  border-radius: 3px;
+  background-color: #555;
+}
+
+.react-flow__handle-left {
+  left: -8px;
+}
+
+.react-flow__handle-right {
+  right: -8px;
 }

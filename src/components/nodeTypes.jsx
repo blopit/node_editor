@@ -9,6 +9,8 @@ import DataValidatorNode from './DataValidatorNode';
 import TextInputNode from './TextInputNode';
 import ApiProcessorNode from './ApiProcessorNode';
 import TextDisplayNode from './TextDisplayNode';
+import RoleCreatorNode from './RoleCreatorNode';
+import TriagerNode from './TriagerNode';
 
 export const nodeTypes = {
   trigger: Trigger,
@@ -21,4 +23,6 @@ export const nodeTypes = {
   textInput: TextInputNode,
   apiProcessor: ApiProcessorNode,
   textDisplay: TextDisplayNode,
+  roleCreator: RoleCreatorNode,
+  triagerNode: TriagerNode,
 };

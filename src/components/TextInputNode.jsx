@@ -7,18 +7,24 @@ const TextInputNode = ({ id, isConnectable }) => {
   const { getEdges, getNode } = useReactFlow();
 
   const handleSubmit = useCallback(() => {
+    console.log('Submitting text:', text);
     const edges = getEdges().filter(edge => edge.source === id);
     
     edges.forEach(edge => {
       const targetNode = getNode(edge.target);
       if (targetNode) {
-        emitToHandle(targetNode.id, text, DataTypes.TEXT);
+        try {
+          emitToHandle(targetNode.id, text, DataTypes.TEXT);
+          console.log(`Emitted to ${targetNode.id}`);
+        } catch (error) {
+          console.error('Error emitting to handle:', error);
+        }
       }
     });
   }, [text, id, getEdges, getNode]);
 
   return (
-    <div className="text-input-node">
+    <div className="text-input-node node">
       <div className="text-input-content">
         <strong>Text Input</strong>
         <textarea
@@ -31,8 +37,11 @@ const TextInputNode = ({ id, isConnectable }) => {
       </div>
       <Handle
         type="source"
-        position={Position.Bottom}
+        position={Position.Right}
+        id="source"
+        data-handleid="source"
         isConnectable={isConnectable}
+        style={{ right: -8 }}
       />
     </div>
   );

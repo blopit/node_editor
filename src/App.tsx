@@ -1,4 +1,4 @@
-import React, {useCallback, useState} from 'react';
+import React, {useCallback, useState, useRef} from 'react';
 import ReactFlow, {
     Node,
     Edge,
@@ -16,6 +16,7 @@ import ReactFlow, {
     BackgroundVariant,
     Panel,
     EdgeMouseHandler,
+    ReactFlowInstance,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import './styles.css';
@@ -23,6 +24,7 @@ import {nodeTypes} from './components/nodeTypes';
 
 type CustomNodeData = {
     label: string;
+    selectedRole?: string;
 };
 
 const initialNodes: Node<CustomNodeData>[] = [
@@ -84,12 +86,22 @@ const Sidebar: React.FC<{ isOpen: boolean }> = ({ isOpen }) => {
     );
 };
 
+const generateId = (() => {
+    let counter = 1;
+    return {
+        next: () => `node_${counter++}`,
+        setCounter: (value: number) => { counter = value; }
+    };
+})();
+
 const App: React.FC = () => {
     const gridSize = 20;
     const [nodes, setNodes, onNodesChangeBase] = useNodesState(initialNodes);
     const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
     const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
+    const reactFlowWrapper = useRef<HTMLDivElement>(null);
+    const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | null>(null);
 
     const onNodesChange = useCallback(
         (changes: NodeChange[]) => {
@@ -140,6 +152,17 @@ const App: React.FC = () => {
         const savedFlow = localStorage.getItem('savedFlow');
         if (savedFlow) {
             const {nodes: savedNodes, edges: savedEdges} = JSON.parse(savedFlow);
+            
+            if (savedNodes && savedNodes.length > 0) {
+                const nodeIds = savedNodes
+                    .map((node: Node<CustomNodeData>) => node.id)
+                    .filter((id: string) => id.startsWith('node_'))
+                    .map((id: string) => parseInt(id.replace('node_', ''), 10));
+                
+                const maxId = Math.max(...nodeIds, 0);
+                generateId.setCounter(maxId + 1);
+            }
+
             setNodes(savedNodes || []);
             setEdges(savedEdges || []);
         }
@@ -154,26 +177,34 @@ const App: React.FC = () => {
         (event: React.DragEvent) => {
             event.preventDefault();
 
-            const reactFlowBounds = document.querySelector('.react-flow')?.getBoundingClientRect();
+            const reactFlowBounds = reactFlowWrapper.current?.getBoundingClientRect();
             const type = event.dataTransfer.getData('application/reactflow');
 
-            if (!type || !reactFlowBounds) return;
+            if (!type || !reactFlowBounds || !reactFlowInstance) return;
 
-            const position = {
-                x: Math.round((event.clientX - reactFlowBounds.left) / gridSize) * gridSize,
-                y: Math.round((event.clientY - reactFlowBounds.top) / gridSize) * gridSize,
+            const position = reactFlowInstance.project({
+                x: event.clientX - reactFlowBounds.left,
+                y: event.clientY - reactFlowBounds.top,
+            });
+
+            const newPosition = {
+                x: Math.round(position.x / gridSize) * gridSize,
+                y: Math.round(position.y / gridSize) * gridSize,
             };
 
             const newNode: Node<CustomNodeData> = {
-                id: (nodes.length + 1).toString(),
+                id: generateId.next(),
                 type,
-                position,
-                data: { label: `${type} node ${nodes.length + 1}` },
+                position: newPosition,
+                data: { 
+                    label: `${type} node`,
+                    selectedRole: type === 'apiProcessor' ? '' : undefined 
+                },
             };
 
             setNodes((nds) => nds.concat(newNode));
         },
-        [nodes, gridSize]
+        [reactFlowInstance, gridSize]
     );
 
     const onEdgeClick: EdgeMouseHandler = useCallback((event, edge) => {
@@ -192,7 +223,7 @@ const App: React.FC = () => {
     return (
         <div style={{ width: '100%', height: '100vh', display: 'flex' }}>
             <Sidebar isOpen={isSidebarOpen} />
-            <div style={{ flex: 1, height: '100%', position: 'relative' }}>
+            <div ref={reactFlowWrapper} style={{ flex: 1, height: '100%', position: 'relative' }}>
                 <button 
                     onClick={() => setIsSidebarOpen(!isSidebarOpen)}
                     style={{
@@ -232,6 +263,7 @@ const App: React.FC = () => {
                     onDrop={onDrop}
                     onEdgeClick={onEdgeClick}
                     onPaneClick={() => setSelectedEdgeId(null)}
+                    onInit={setReactFlowInstance}
                 >
                     <Background variant={BackgroundVariant.Dots} gap={gridSize} size={1} color="#5F574F"/>
                     <Controls/>

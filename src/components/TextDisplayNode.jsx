@@ -6,13 +6,14 @@ const TextDisplayNode = ({ id, isConnectable }) => {
   const displayText = useHandleData(id, DataTypes.TEXT);
 
   return (
-    <div className="text-display-node">
+    <div className="text-display-node node">
       <Handle
         type="target"
-        position={Position.Top}
+        position={Position.Left}
         id="target"
         data-handleid="target"
         isConnectable={isConnectable}
+        style={{ left: -8 }}
       />
       <div className="text-display-content">
         <strong>Text Display</strong>
