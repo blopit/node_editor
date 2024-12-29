@@ -1,27 +1,70 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Handle, Position, useReactFlow } from 'reactflow';
-import { useHandleData, emitToHandle, DataTypes, runAgent } from '../utils/handleUtils';
+import { 
+  useHandleData, 
+  emitToHandle, 
+  DataTypes, 
+  fetchRoles,
+  runAgent 
+} from '../utils/handleUtils';
 
-const TriagerNode = ({ id, isConnectable }) => {
-  const [text, setText] = useState('');
+const TriagerNode = ({ id, data, isConnectable }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const { getEdges, getNode } = useReactFlow();
+  const [roles, setRoles] = useState([]);
+  const { getEdges, getNode, setNodes } = useReactFlow();
+  
+  // Use the saved role from node data, or default to empty string
+  const selectedRole = data.selectedRole || '';
+
+  // Fetch available roles on component mount
+  useEffect(() => {
+    const loadRoles = async () => {
+      const availableRoles = await fetchRoles();
+      setRoles(availableRoles);
+      if (availableRoles.length > 0 && !selectedRole) {
+        // Set the first role as default if none is selected
+        setNodes(nodes => nodes.map(node => {
+          if (node.id === id) {
+            return {
+              ...node,
+              data: {
+                ...node.data,
+                selectedRole: availableRoles[0].name
+              }
+            };
+          }
+          return node;
+        }));
+      }
+    };
+    loadRoles();
+  }, [id, selectedRole, setNodes]);
 
   const inputText = useHandleData(id, DataTypes.TEXT);
 
   useEffect(() => {
     if (inputText) {
-      console.log(`TriagerNode ${id} received:`, inputText);
-      setText(inputText);
+      console.log(`TriagerNode ${id} received:`, {
+        data: inputText,
+        type: DataTypes.TEXT,
+        timestamp: new Date().toISOString(),
+        selectedRole: selectedRole
+      });
     }
-  }, [inputText, id]);
+  }, [inputText, id, selectedRole]);
 
   const determineBestRole = useCallback(async (content) => {
     setLoading(true);
     setError(null);
 
     try {
+      console.log(`TriagerNode ${id} processing:`, {
+        input: content,
+        role: selectedRole,
+        timestamp: new Date().toISOString()
+      });
+
       const edges = getEdges().filter(edge => edge.source === id);
       let bestRole = null;
       let bestScore = -Infinity;
@@ -30,16 +73,20 @@ const TriagerNode = ({ id, isConnectable }) => {
         const targetNode = getNode(edge.target);
         if (targetNode && targetNode.data.selectedRole) {
           const role = targetNode.data.selectedRole;
-          const score = await runAgent(role, content, true); // Assume runAgent can return a suitability score
-          if (score > bestScore) {
-            bestScore = score;
-            bestRole = role;
+          const score = await runAgent(selectedRole, `Given this text: "${content}", rate from 0-100 how suitable the role "${role}" would be to process it.`, false);
+          const numericalScore = parseInt(score) || 0;
+          
+          console.log(`Score for role ${role}:`, numericalScore);
+          
+          if (numericalScore > bestScore) {
+            bestScore = numericalScore;
+            bestRole = edge.target;
           }
         }
       }
 
       if (bestRole) {
-        console.log(`Best role determined: ${bestRole}`);
+        console.log(`TriagerNode ${id} selected target:`, bestRole);
         emitToHandle(bestRole, content, DataTypes.TEXT);
       } else {
         throw new Error('No suitable role found');
@@ -50,20 +97,50 @@ const TriagerNode = ({ id, isConnectable }) => {
     } finally {
       setLoading(false);
     }
-  }, [getEdges, getNode, id]);
+  }, [getEdges, getNode, id, selectedRole]);
 
   useEffect(() => {
-    if (text) {
-      determineBestRole(text);
+    if (inputText) {
+      determineBestRole(inputText);
     }
-  }, [text, determineBestRole]);
+  }, [inputText, determineBestRole]);
+
+  const handleRoleChange = (e) => {
+    const newRole = e.target.value;
+    setNodes(nodes => nodes.map(node => {
+      if (node.id === id) {
+        return {
+          ...node,
+          data: {
+            ...node.data,
+            selectedRole: newRole
+          }
+        };
+      }
+      return node;
+    }));
+  };
 
   return (
     <div className="triager-node node">
       <div className="triager-content">
         <strong>Triager Node</strong>
-        {loading && <p className="loading">Determining best role...</p>}
-        {error && <p className="error">{error}</p>}
+        <div className="role-selector">
+          <select 
+            value={selectedRole}
+            onChange={handleRoleChange}
+          >
+            {roles.map(role => (
+              <option key={role.id} value={role.name}>
+                {role.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="status">
+          {loading && <p className="loading">Determining best role...</p>}
+          {error && <p className="error">{error}</p>}
+        </div>
       </div>
       <Handle
         type="target"
